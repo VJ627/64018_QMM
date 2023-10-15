@@ -1,0 +1,185 @@
+---
+title: "QMM_TRANSPORTATION"
+author: "Venkateswara Rao Jammula"
+date: "2023-10-15"
+output: word_document
+---
+```{R}
+#USING lpsolveAPI
+library(lpSolveAPI)
+```
+
+***
+We have 6 decision variables, and 5 constraints (e.g., 3 warehouse and 2 supplier constraints).
+
+Let,
+
+X11 = total units shipped from plant A to warehouse 1
+X12 = total units shipped from plant A to warehouse 2
+X13 = total units shipped from plant A to warehouse 3
+X21 = total units shipped from plant B to warehouse 1 
+X22 = total units shipped from plant B to warehouse 2
+X23 = total units shipped from plant B to warehouse 3
+
+LP formulation for this problem:
+
+We have only 2 plants, with 3 distinations or warehouses
+
+**Maximize**
+
+Z = 22X11 + 14X12 + 30X13 + 16X21 + 20X22 + 24X23
+
+ST:
+
+**Demander Constraints**
+1X11 + 1X12 = 80
+1X12 + 1X22 = 60
+1X13 + 1X23 = 70
+
+**Supplier Constraints**
+1X11 + 1X12 + 1X13 = 100
+1X21 + 1X22 + 1X23 = 120
+20X7 + 15X8 + 12X9 = 5000
+
+Xij >=0
+The variables xij refer to units shipped from the plants (i) to the various warehouses (j).
+
+The total supply is 220, while the total warehouse capacity is only 210. So, creating  a dummy warehouse capacity 
+
+To determine the cost associated with producing and storing at the dummy installation site, we need to consider that the objective function coefficients include the cost of storage. Typically, for a dummy warehouse, there are no actual shipments, so the objective coefficient for such a variable would be zero. However, in linear programming, since we aim to minimize costs, we often assign a high cost to the dummy warehouses to discourage their use in the optimal solution. This approach is known as the "Big M method."
+
+In this particular case, we can set the cost for X14 (representing shipments to the dummy warehouse) to $600, and for X24, which represents shipments to another dummy warehouse, to $625. This effectively puts a penalty on using these dummy warehouses as part of the optimal solution. The high costs make it less favorable to allocate resources to these dummy warehouses, encouraging the model to find solutions that prioritize the actual warehouses with lower associated costs for production and storage.
+
+The complete formulation is :
+
+X11        = total units shipped from plant A to warehouse 1
+X12        = total units shipped from plant A to warehouse 2
+X13        = total units shipped from plant A to warehouse 3
+X14(dummy) = total units shipped from plant A to warehouse 4 
+X21        = total units shipped from plant B to warehouse 1 
+X22        = total units shipped from plant B to warehouse 2
+X23        = total units shipped from plant B to warehouse 3
+X24(dummy) = total units shipped from plant B to warehouse 4 
+
+LP formulation for this problem:
+
+2 plants, with 3 warehouses
+
+**Maximize**
+
+Z = 22X11 + 14X12 + 30X13 + 0X14+ 16X21 + 20X22 + 24X23 + 0X24
+
+ST:
+
+**Demander Constraints**
+1X11 + 1X12 = 80
+1X12 + 1X22 = 60
+1X13 + 1X23 = 70
+1X14 + 1X24 = 10 
+                            
+**Supplier Constraint**
+1X11 + 1X12 + 1X13 = 100
+1X21 + 1X22 + 1X23 = 120
+20X7 + 15X8 + 12X9 = 5000
+
+Xij >=0
+
+         
+2 new decision variables (dummies X14 and X24) and an extra constraint (dummy warehouse).
+This gives 8 decision variables and 6 structural constraints.
+
+```{r}
+# Create an LP model with 6 constraints (rows) and 8 decision variables (columns)
+lptransmodel <- make.lp(6, 8)
+
+# Set the objective function coefficients (default is minimization)
+set.objfn(lptransmodel, c(22, 14, 30, 600, 16, 20, 24, 625))
+
+# Change the optimization direction to minimization (optional, as it's already the default)
+lp.control(lptransmodel, sense = 'min')
+
+# Add constraints to the model:
+
+# Plant A production and shipping capacity constraint
+add.constraint(lptransmodel, c(1, 1, 1, 1, 0, 0, 0, 0), "=", 100)
+
+# Plant B production and shipping capacity constraint
+add.constraint(lptransmodel, c(0, 0, 0, 0, 1, 1, 1, 1), "=", 120)
+
+# Warehouse 1 capacity requirement constraint
+add.constraint(lptransmodel, c(1, 0, 0, 0, 1, 0, 0, 0), "=", 80)
+
+# Warehouse 2 capacity requirement constraint
+add.constraint(lptransmodel, c(0, 1, 0, 0, 0, 1, 0, 0), "=", 60)
+
+# Warehouse 3 capacity requirement constraint
+add.constraint(lptransmodel, c(0, 0, 1, 0, 0, 0, 1, 0), "=", 70)
+
+# Warehouse 4 (dummy) capacity requirement constraint
+add.constraint(lptransmodel, c(0, 0, 0, 1, 0, 0, 0, 1), "=", 10)
+
+# Print the LP model
+lptransmodel
+
+```
+
+```{r}
+#solving lp Problem
+solve(lptransmodel)
+# '0' indicates a solution was found.
+```
+
+```{r}
+get.objective(lptransmodel)
+get.variables(lptransmodel)
+get.constraints(lptransmodel)
+get.sensitivity.obj(lptransmodel)
+get.sensitivity.rhs(lptransmodel)
+```
+***
+
+
+**Objective Value**: The minimum cost associated with this transportation transshipment problem is $9,980. This cost represents the most cost-effective way to move goods from production plants to warehouses, taking into account both production and shipping costs.
+
+**Variable Values**: The solution provides values for each of the decision variables, which indicate how many units of a product are shipped from each source (plants) to each destination (warehouses). 
+
+The variable values are as follows:
+
+- **X11**: 30 units are shipped from Plant A to Warehouse 1.
+- **X12**: 60 units are shipped from Plant A to Warehouse 2.
+- **X13**: 0 units are shipped from Plant A to Warehouse 3.
+- **X14**: 10 units are shipped from Plant A to Warehouse 4 (dummy). These units do not actually get shipped but remain in storage as a result of the optimization.
+- **X21**: 50 units are shipped from Plant B to Warehouse 1.
+- **X22**: 0 units are shipped from Plant B to Warehouse 2.
+- **X23**: 70 units are shipped from Plant B to Warehouse 3.
+- **X24**: 0 units are shipped from Plant B to Warehouse 4 (dummy).
+
+The solution demonstrates that to minimize transportation costs while meeting capacity and demand constraints, it's optimal to ship 30 units from Plant A to Warehouse 1, 60 units from Plant A to Warehouse 2, and so on. The 10 units shipped from Plant A to Warehouse 4 are not actually shipped but rather remain in storage (hence, the "dummy" designation). 
+
+**Production Costs**: The production costs, which are irrelevant to the total shipping costs, are as follows: 100 units are produced at Plant A with a cost of $60,000, and 120 units are produced at Plant B with a cost of $75,000. The total production cost is $135,000.
+
+The solution found by the LP model indicates the optimal way to transport goods from the production plants to the warehouses while minimizing total costs, which include both shipping and production costs. The variable values show how many units are shipped from each source to each destination. The total cost is $9,980, considering the penalty for items left in storage.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
