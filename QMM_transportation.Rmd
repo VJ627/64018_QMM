@@ -25,7 +25,7 @@ LP formulation for this problem:
 
 We have only 2 plants, with 3 distinations or warehouses
 
-**Maximize**
+
 
 Z = 22X11 + 14X12 + 30X13 + 16X21 + 20X22 + 24X23
 
@@ -65,7 +65,7 @@ LP formulation for this problem:
 
 2 plants, with 3 warehouses
 
-**Maximize**
+
 
 Z = 22X11 + 14X12 + 30X13 + 0X14+ 16X21 + 20X22 + 24X23 + 0X24
 
@@ -160,15 +160,47 @@ The solution demonstrates that to minimize transportation costs while meeting ca
 
 The solution found by the LP model indicates the optimal way to transport goods from the production plants to the warehouses while minimizing total costs, which include both shipping and production costs. The variable values show how many units are shipped from each source to each destination. The total cost is $9,980, considering the penalty for items left in storage.
 
+#may also be done as
+
+***
+Minimized cost of production and shipping : 
+Objective Function 
+Zmin = 622X11 + 614X12 + 630X13 + 0X14 + 641X21+645X22+649X23 + 0X24 
+6 decision variables and 2 dummy variables are considered to equalize supply and demand. 
+Constraints: Supply Constraints 
+X11 + X12 + X13 + X14 = 100
+X21 + X22 + X23 + X24 = 120 
+Demand Constraints X11 + X21 = 80 
+X12 + X22 = 60 
+X13 + X23 = 70 
+X14 + X24 = 10 
+Where, Xij >=0 (i (Plant) =1,2 and j (warehouses) = 1,2,3,4)
 
 
+```{r}
+library(lpSolveAPI)
+lprec<-make.lp(0,8)
+lp.control(lprec,sense='min')
+```
 
+```{r}
+set.objfn(lprec,c(622,614,630,0,641,645,649,0))
+add.constraint(lprec,rep(1,4),"=",100,indices =c(1,2,3,4))
+add.constraint(lprec,rep(1,4),"=",120,indices =c(5,6,7,8))
+add.constraint(lprec,rep(1,2),"=",80,indices =c(1,5))
+add.constraint(lprec,rep(1,2),"=",60,indices =c(2,6))
+add.constraint(lprec,rep(1,2),"=",70,indices =c(3,7))
+add.constraint(lprec,rep(1,2),"=",10,indices=c(4,8))
+solve(lprec)
+```
+```{r}
+get.objective(lprec)
 
+get.constraints(lprec)
 
+get.variables(lprec)
 
-
-
-
+```
 
 
 
